@@ -7,6 +7,9 @@ Handle g_hCreateServerRagdoll;
 bool g_bShouldRecord[MAXPLAYERS+1];
 ArrayList g_ragdolls[MAXPLAYERS+1];
 int g_bruhModel;
+any info[0x90];
+
+float g_tickrate;
 
 public void OnPluginStart()
 {
@@ -43,6 +46,8 @@ public void OnPluginStart()
 
     RegConsoleCmd("sm_create_ragdoll", Command_CreateRagdoll);
     HookEvent("player_death", Event_PlayerDeath);
+
+    g_tickrate = 1.0 / GetTickInterval();
 }
 
 public void OnMapStart()
@@ -71,9 +76,12 @@ public void OnClientDisconnect(int client)
     {
         for (int j = 0; j < g_ragdolls[client].Length; j++)
         {
+            // maybe use CBaseEntity::RemoveDeferred?
             AcceptEntityInput(g_ragdolls[client].Get(j), "kill");
         }
     }
+
+    delete g_ragdolls[client];
 }
 
 public void OnPluginEnd()
@@ -88,6 +96,8 @@ public void OnPluginEnd()
             {
                 AcceptEntityInput(g_ragdolls[i].Get(j), "kill");
             }
+            
+            delete g_ragdolls[i];
         }
     }
 }
@@ -110,23 +120,24 @@ void CreateRagdoll(int owner)
     if (!g_ragdolls[owner])
         g_ragdolls[owner] = new ArrayList();
 
-    if (g_ragdolls[owner].Length > 200)
+    if (g_ragdolls[owner].Length > RoundFloat(g_tickrate / 3) )
     {
         int ragdoll = g_ragdolls[owner].Get(0);
         AcceptEntityInput(ragdoll, "kill");
         g_ragdolls[owner].Erase(0);
     }
 
-    any info[0x4C];
     int entity = SDKCall(g_hCreateServerRagdoll, owner, GetEntProp(owner, Prop_Send, "m_nForceBone"), info, 3, false);
-    SetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity", owner);
+    int flags = GetEntProp(entity, Prop_Send, "m_fEffects");
+    SetEntProp(entity, Prop_Send, "m_fEffects", flags|0x010|0x040);
+
     SetEntProp(entity, Prop_Send, "m_nModelIndex", g_bruhModel);
-    SetEntityRenderMode(entity, RENDER_TRANSCOLOR)
+    SetEntityRenderMode(entity, RENDER_TRANSALPHA)
 
     int r = RoundFloat(Sine((GetEngineTime() / 2) * 4.0)) * 127 + 128;
     int g = RoundFloat(Sine((GetEngineTime() / 2) * 4.0 + 2.0)) * 127 + 128;
     int b = RoundFloat(Sine((GetEngineTime() / 2) * 4.0 + 4.0)) * 127 + 128;
-    SetEntityRenderColor(entity, r, g, b, 64);
+    SetEntityRenderColor(entity, r, g, b, 32);
     g_ragdolls[owner].Push(entity);
 }
 
@@ -135,7 +146,7 @@ public Action OnPlayerRunCmd(int client)
     if (!client || IsFakeClient(client) || !g_bShouldRecord[client])
         return Plugin_Continue;
 
-    if (GetGameTickCount() % 2 == 0)
+    if (GetGameTickCount() % 3 == 0)
         CreateRagdoll(client);
 
     return Plugin_Continue;
