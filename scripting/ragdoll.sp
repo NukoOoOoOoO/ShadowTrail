@@ -3,6 +3,7 @@
 #include <sourcescramble>
 
 Address g_wakeRagdollAddress;
+int g_wakeRagdollPadding;
 Handle g_hCreateServerRagdoll;
 MemoryBlock memory;
 bool g_bShouldRecord[MAXPLAYERS+1];
@@ -21,7 +22,14 @@ public void OnPluginStart()
         SetFailState("pRagdoll->InitRagdoll.bWakeRagdoll not found");
     }
 
-    StoreToAddress(g_wakeRagdollAddress + view_as<Address>(1), 0x00, NumberType_Int8); // 0
+    g_wakeRagdollPadding = gamedata.GetOffset("bWakeRagdollPadding");
+    if (g_wakeRagdollPadding == -1)
+    {
+        delete gamedata;
+        SetFailState("bWakeRagdollPadding not found");
+    }
+
+    StoreToAddress(g_wakeRagdollAddress + view_as<Address>(g_wakeRagdollPadding), 0x00, NumberType_Int8);
 
     StartPrepSDKCall(SDKCall_Static);
     PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "CreateServerRagdoll");
@@ -60,9 +68,20 @@ public void OnClientPutInServer(int client)
     g_ragdolls[client] = new ArrayList();
 }
 
+public void OnClientDisconnect(int client)
+{
+    if (g_ragdolls[client])
+    {
+        for (int j = 0; j < g_ragdolls[client].Length; j++)
+        {
+            AcceptEntityInput(g_ragdolls[client].Get(j), "kill");
+        }
+    }
+}
+
 public void OnPluginEnd()
 {
-    StoreToAddress(g_wakeRagdollAddress + view_as<Address>(1), 0x01, NumberType_Int8);
+    StoreToAddress(g_wakeRagdollAddress + view_as<Address>(g_wakeRagdollPadding), 0x01, NumberType_Int8);
 
     for (int i = 1; i <= MaxClients; i++)
     {

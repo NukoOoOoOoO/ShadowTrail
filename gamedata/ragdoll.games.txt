@@ -2,6 +2,77 @@
 {
     "cstrike"
     {
+        "Offsets"
+        {
+            "bWakeRagdollPadding"
+            {
+                "windows"   "1"
+                "linux"     "4"
+            }
+        }
+
+        "Addresses"
+        {
+            "pRagdoll->InitRagdoll.bWakeRagdoll"
+            {
+                "windows"
+                {
+                    "signature"    "bWakeRagdollFromCreateServerRagdoll"
+                }
+                "linux"
+                {
+                    "signature"    "bWakeRagdollFromCreateServerRagdoll"
+                }
+            }
+        }
+
+        // search for string "Bad ragdoll pose in entity %s, model (%s) at %s, model changed?\n", it is located in the function "CRagdollProp::InitRagdoll"
+        // void CRagdollProp::InitRagdoll( const Vector &forceVector, int forceBone, const Vector &forcePos, matrix3x4_t *pPrevBones, matrix3x4_t *pBoneToWorld, float dt, int collisionGroup, bool activateRagdoll, bool bWakeRagdoll )
+        // xref the function, see if it is called from the function "CreateServerRagdoll"(which contains the string "prop_ragdoll" and the last parameter is a bool)
+        // if so, then make a signature for the function "CreateServerRagdoll" 
+        // after making the signature, see where "CRagdollProp::InitRagdoll" is called in "CreateServerRagdoll", and see if the parameter "forcePos" is -1
+        // if it is not, then look at the disassembler and look for where the last parameter "bWakeRagdoll" is at, at the time I found it, the disassembler looks like this (windows platform):
+
+        /* 
+        .text:101B19BF 8B 41 10                                                        mov     eax, [ecx+10h]
+        .text:101B19C2 89 45 C8                                                        mov     [ebp-38h], eax
+        .text:101B19C5 8B 41 14                                                        mov     eax, [ecx+14h]
+        .text:101B19C8 6A 01                                                           push    1               ; <--- bWakeRagdoll, make a signature at this postion
+        .text:101B19CA 89 45 CC                                                        mov     [ebp-34h], eax
+        .text:101B19CD 8B 01                                                           mov     eax, [ecx]
+        .text:101B19CF 6A 01                                                           push    1               ; activateRagdoll
+        */
+
+        // then we successfully found the signature for "bWakeRagdollFromCreateServerRagdoll"
+        "Signatures"
+        {
+            "bWakeRagdollFromCreateServerRagdoll"
+            {
+                "library"   "server"
+                "windows"   "\x6A\x01\x89\x45\xCC\x8B\x01"
+                "linux"     "\xC7\x44\x24\x2A\x2A\x2A\x2A\x2A\xC7\x44\x24\x2A\x2A\x2A\x2A\x2A\x89\x45\xB0"
+            }
+
+            "CreateServerRagdoll"
+            {
+                "library"   "server"
+                "windows"   "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\xB8\x68\x32\x00\x00"
+                "linux"     "\x55\x89\xE5\x57\x56\x53\x81\xEC\xEC\x32\x00\x00"
+            }
+        }
+    }
+
+    "csgo"
+    {
+        "Offsets"
+        {
+            "bWakeRagdollPadding"
+            {
+                "windows"   "1"
+                "linux"     "4"
+            }
+        }
+
         "Addresses"
         {
             "pRagdoll->InitRagdoll.bWakeRagdoll"
@@ -22,13 +93,15 @@
             "bWakeRagdollFromCreateServerRagdoll"
             {
                 "library"   "server"
-                "windows"   "\x6A\x01\x89\x45\xCC\x8B\x01"
+                "windows"   "\x6A\x01\x6A\x01\xFF\x75\x0C\x89\x44\x24\x48"
+                "linux"     "\xC7\x44\x24\x2A\x2A\x2A\x2A\x2A\xC7\x44\x24\x2A\x2A\x2A\x2A\x2A\x89\x45\xC0\x8D\x85"
             }
 
             "CreateServerRagdoll"
             {
                 "library"   "server"
-                "windows"   "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\xB8\x68\x32\x00\x00"
+                "windows"   "\x55\x8B\xEC\x83\xE4\xF0\xB8\x68\x62\x00\x00"
+                "linux"     "\x55\x89\xE5\x57\x56\x53\x81\xEC\xCC\x62\x00\x00"
             }
         }
     }
