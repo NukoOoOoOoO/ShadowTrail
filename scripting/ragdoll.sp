@@ -1,11 +1,9 @@
 #include <sourcemod>
 #include <sdktools>
-#include <sourcescramble>
 
 Address g_wakeRagdollAddress;
 int g_wakeRagdollPadding;
 Handle g_hCreateServerRagdoll;
-MemoryBlock memory;
 bool g_bShouldRecord[MAXPLAYERS+1];
 ArrayList g_ragdolls[MAXPLAYERS+1];
 int g_bruhModel;
@@ -33,16 +31,15 @@ public void OnPluginStart()
 
     StartPrepSDKCall(SDKCall_Static);
     PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "CreateServerRagdoll");
-    PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-    PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
+    PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer); // pAnimating
+    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain); // forceBone
+    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByRef); // info
+    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain); // collisionGroup
+    PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain); // bUseLRURetirement
     PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
     g_hCreateServerRagdoll = EndPrepSDKCall();
 
     delete gamedata;
-    memory = new MemoryBlock(0x4C);
 
     RegConsoleCmd("sm_create_ragdoll", Command_CreateRagdoll);
     HookEvent("player_death", Event_PlayerDeath);
@@ -120,7 +117,8 @@ void CreateRagdoll(int owner)
         g_ragdolls[owner].Erase(0);
     }
 
-    int entity = SDKCall(g_hCreateServerRagdoll, owner, GetEntProp(owner, Prop_Send, "m_nForceBone"), memory.Address, 3, false);
+    any info[0x4C];
+    int entity = SDKCall(g_hCreateServerRagdoll, owner, GetEntProp(owner, Prop_Send, "m_nForceBone"), info, 3, false);
     SetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity", owner);
     SetEntProp(entity, Prop_Send, "m_nModelIndex", g_bruhModel);
     SetEntityRenderMode(entity, RENDER_TRANSCOLOR)
