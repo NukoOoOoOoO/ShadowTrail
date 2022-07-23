@@ -1,0 +1,35 @@
+"Games"
+{
+    "cstrike"
+    {
+        "Addresses"
+        {
+            "pRagdoll->InitRagdoll.bWakeRagdoll"
+            {
+                "windows"
+                {
+                    "signature"    "bWakeRagdollFromCreateServerRagdoll"
+                }
+                "linux"
+                {
+                    "signature"    "bWakeRagdollFromCreateServerRagdoll"
+                }
+            }
+        }
+
+        "Signatures"
+        {
+            "bWakeRagdollFromCreateServerRagdoll"
+            {
+                "library"   "server"
+                "windows"   "\x6A\x01\x89\x45\xCC\x8B\x01"
+            }
+
+            "CreateServerRagdoll"
+            {
+                "library"   "server"
+                "windows"   "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\xB8\x68\x32\x00\x00"
+            }
+        }
+    }
+}
